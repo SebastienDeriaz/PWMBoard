@@ -10,10 +10,10 @@
 
     devShells.default = nixpkgs.mkShell {
       nativeBuildInputs = with nixpkgs; [
-        avrlibc
-        avrdude
-        binutils
-        pkgsCross.avr.buildPackages.gcc
+        #avrlibc
+        #avrdude
+        #binutils
+        #pkgsCross.avr.buildPackages.gcc
       ];
     };
   };

@@ -9,8 +9,8 @@ int main(void)
 
   while (1) {
     PORTA = 0x00;
-    _delay_ms(5);
+    _delay_ms(100);
     PORTA = 0x03;
-    _delay_ms(5);
+    _delay_ms(100);
   }
 }
