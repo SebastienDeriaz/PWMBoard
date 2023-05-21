@@ -58,44 +58,63 @@ class Pin {
         }
     }
 
-    bool getState() { return (_PIN & (1 << pin_number)) != 0; }
+    bool getState() { return (_DDR & (1 << pin_number)) == 0; }
     void setState(bool value) {
         _PORT = (_PORT & ~(1 << pin_number)) | ((value ? 1 : 0) << pin_number);
     }
 };
 
 class SoftHBridge {
-    int32_t speed;
-    const int32_t step = 1;
+    float x;
+    const float step = 1e-3;
     Pin& _AL;
     Pin& _BL;
     Pin& _AH;
     Pin& _BH;
-    int32_t ocrMax;
+    uint16_t ocrMax;
 
     public:
-    void setSpeed(int32_t speed) {
-        if (speed == 0) {
-          _AH.setPwm(0);
-          _BH.setPwm(0);
-          _AL.setState(false);
-          _BL.setState(false);
+    void setDirection(float x) {
+        if (x > 1.0f) {
+            x = 1.0f;
+        } else if (x < -1.0f) {
+            x = -1.0f;
         }
-        else if (speed > 0) {
-            _AH.setPwm(speed);
+
+        //uint16_t pwmValue = fabsf(x) * ocrMax;
+
+        if (x >= 0.0f) {
+            _AH.setPwm((uint16_t)x * ocrMax);
             _BH.setPwm(0);
             _AL.setState(false);
             _BL.setState(true);
         } else {
             _AH.setPwm(0);
-            _BH.setPwm(-speed);
+            _BH.setPwm((uint16_t) - x * ocrMax);
             _AL.setState(true);
             _BL.setState(false);
         }
+
+        /*if (x == 0.0f) {
+            _AH.setPwm(pwmValue);
+            _BH.setPwm(0);
+            _AL.setState(false);
+            _BL.setState(false);
+        } else if (x > 0.0f) {
+            _AH.setPwm(pwmValue);
+            _BH.setPwm(0);
+            _AL.setState(false);
+            _BL.setState(true);
+        } else {
+            _AH.setPwm(0);
+            _BH.setPwm(pwmValue);
+            _AL.setState(true);
+            _BL.setState(false);
+        }*/
     }
 
    public:
-    SoftHBridge(Pin& AL, Pin& BL, Pin& AH, Pin& BH, int32_t ocrMax)
+    SoftHBridge(Pin& AL, Pin& BL, Pin& AH, Pin& BH, uint16_t ocrMax)
         : _AL(AL), _BL(BL), _AH(AH), _BH(BH), ocrMax(ocrMax) {
         _AL.setDirection(Pin::OUTPUT);
         _BL.setDirection(Pin::OUTPUT);
@@ -105,35 +124,39 @@ class SoftHBridge {
         _BL.setState(false);
         _AH.setPwm(0);
         _BH.setPwm(0);
-        speed = 0;
+        x = 0.0f;
     }
 
     void update(bool A, bool B) {
+        /*if (A) {
+            x += step;
+            if (x > 1.0f) {
+                x = 1.0f;
+            }
+        } else if (B) {
+            x -= step;
+            if (x < 1.0f) {
+                x = -1.0f;
+            }
+        } else {
+            // If it is close to zero, make it zero
+            if (fabsf(x) <= step) {
+                x = 0.0f;
+            } else if (x > 0) {
+                x -= step;
+            } else if (x < 0) {
+                x += step;
+            }
+        }*/
 
-        if (A && speed >= 0) {
-          speed += step;
-          if (speed > ocrMax) {
-            speed = ocrMax;
-          }
-        }
-        else if (B && speed <= 0) {
-          speed -= step;
-          if (speed < -ocrMax) {
-            speed = -ocrMax;
-          }
+        //setDirection(x);
+
+        if (A) {
+          setDirection(0.5);
         }
         else {
-          // If it is close to zero, make it zero
-            if ((speed < 0 ? -speed : speed) <= step) {
-                speed = 0;
-            } else if (speed > 0) {
-                speed -= step;
-            } else if (speed < 0) {
-                speed += step;
-            }
+          setDirection(0.5);
         }
-
-        setSpeed(speed);
     }
 };
 
@@ -145,7 +168,7 @@ int main(void) {
     TCCR1B =
         (1 << WGM13) | (1 << WGM12) | (0 << CS12) | (0 << CS11) | (1 << CS10);
 
-    ICR1 = 500;
+    ICR1 = 2000;
 
     Pin BH(
         PORTB, DDRB, PINB, PB4,
@@ -162,20 +185,24 @@ int main(void) {
     Pin BL(PORTB, DDRB, PINB, PB2);
     Pin AL(PORTB, DDRB, PINB, PB1);
 
-    Pin A(PORTA, DDRA, PINA, PA1);
-    Pin B(PORTA, DDRA, PINA, PA0);
+    //Pin A(PORTA, DDRA, PINA, PA1);
+    //Pin B(PORTA, DDRA, PINA, PA0);
 
-    A.setDirection(Pin::INPUT_PULLUP);
-    B.setDirection(Pin::INPUT_PULLUP);
+    //A.setDirection(Pin::INPUT_PULLUP);
+    //B.setDirection(Pin::INPUT_PULLUP);
 
-    SoftHBridge softHBridge(AL, BL, AH, BH, (int32_t)ICR1);
+    SoftHBridge softHBridge(AL, BL, AH, BH, ICR1);
 
+    // SoftHBridge softHBridge(hbridge);
+
+    softHBridge.setDirection(0.5);
 
     while (1) {
-        softHBridge.update(
-          A.getState(),
-          B.getState()
-        );
-        _delay_us(5000);
+        /*softHBridge.update(
+          false,//A.getState(),
+          false
+          //B.getState()
+        );*/
+        _delay_ms(1);
     }
 }

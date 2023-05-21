@@ -24,3 +24,7 @@ Compiler : ``avr32-linux-gnu-gcc`` or ``avr32-linux-gnu-gcc``
 ## Flash
 
 ``avrdude -p t2313 -c usbasp -U flash:w:main.elf``
+
+## Notes
+
+Libraries in ``/usr/avr/include``
